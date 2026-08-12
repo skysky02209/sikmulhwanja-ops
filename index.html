@@ -1,0 +1,1059 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="식물환자 OPS — 학교 온실 운영자를 위한 센서·측정 현황 관리 화면. 모든 수치는 UI 데모 데이터입니다.">
+<title>식물환자 OPS — 온실 운영 관리</title>
+<style>/* 식물환자 OPS — 온실 운영 콘솔
+   자기완결형. 외부 폰트·CDN 없음. 데스크톱 우선, 768px 이하 단일 열. */
+
+:root{
+  /* 배경: 옅은 회녹색 */
+  --bg:#eef2ee;
+  --surface:#ffffff;
+  --surface-2:#f6f8f6;
+  --line:#dae1dc;
+  --line-strong:#c3ccc5;
+
+  /* 짙은 숲 녹색 — 내비게이션·현황 패널 */
+  --forest:#12301f;
+  --forest-2:#1a4130;
+  --forest-line:#2c5a42;
+  --on-forest:#eaf2ec;
+  --on-forest-dim:#9db8a8;
+
+  --text:#16211a;
+  --muted:#5a6b60;
+
+  /* 상태색 — 대비 확보 */
+  --ok:#1d6f42;      --ok-bg:#e6f2ea;
+  --info:#1f5f74;    --info-bg:#e5f0f4;
+  --warn:#8a5200;    --warn-bg:#fdf1de;
+  --alert:#9a4a00;   --alert-bg:#fdeede;
+  --error:#a3231b;   --error-bg:#fbeae9;
+
+  --radius:12px;
+  --shadow:0 1px 2px rgba(18,48,31,.06), 0 6px 20px rgba(18,48,31,.05);
+}
+
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0e1512; --surface:#141d18; --surface-2:#18221d;
+    --line:#25332b; --line-strong:#33453a;
+    --forest:#0c2215; --forest-2:#123020; --forest-line:#1f4732;
+    --text:#e6efe9; --muted:#93a89a;
+    --ok:#5fc78c; --ok-bg:#12291d;
+    --info:#69bcd6; --info-bg:#0f2830;
+    --warn:#e0a33c; --warn-bg:#2c2110;
+    --alert:#e59356; --alert-bg:#2e1e11;
+    --error:#f08a82; --error-bg:#301715;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+  }
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--text);
+  font:15px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",
+       system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1240px;margin:0 auto;padding:0 24px 64px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.muted{color:var(--muted)} .small{font-size:13px}
+.ico{flex:none;vertical-align:-2px}
+
+:focus-visible{outline:3px solid var(--ok);outline-offset:2px;border-radius:6px}
+
+/* ================= 내비게이션 ================= */
+.nav{background:var(--forest);color:var(--on-forest);position:sticky;top:0;z-index:40}
+.nav-inner{max-width:1240px;margin:0 auto;padding:0 24px;height:64px;
+  display:flex;align-items:center;gap:28px}
+.brand{display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none;
+  font-size:16px;letter-spacing:-.01em;white-space:nowrap}
+.brand-mark{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;
+  background:rgba(255,255,255,.1);color:#8fd6a8}
+.brand-text b{font-weight:800;letter-spacing:.04em}
+.nav-menu{display:flex;gap:4px;margin-left:8px}
+.nav-link{color:var(--on-forest-dim);text-decoration:none;font-size:14px;
+  padding:8px 13px;border-radius:8px;white-space:nowrap}
+.nav-link:hover{color:var(--on-forest);background:rgba(255,255,255,.07)}
+.nav-link.is-current{color:#fff;background:rgba(255,255,255,.12);font-weight:600}
+.nav-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  min-height:40px;padding:0 15px;border-radius:9px;border:1px solid transparent;
+  font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none}
+.btn-solid{background:#2f8f5b;color:#fff}
+.btn-solid:hover{background:#268050}
+.btn-icon{min-width:40px;padding:0 8px;background:rgba(255,255,255,.1);
+  color:var(--on-forest);display:none}
+.nav-toggle{display:none}
+
+/* ================= 히어로 ================= */
+.hero{display:grid;grid-template-columns:1.05fr .95fr;gap:36px;align-items:center;
+  padding:52px 0 36px}
+.eyebrow{margin:0 0 12px;font-size:11.5px;font-weight:700;letter-spacing:.16em;
+  color:var(--ok)}
+.hero h1{margin:0 0 14px;font-size:44px;line-height:1.16;letter-spacing:-.025em;
+  font-weight:800}
+.lede{margin:0 0 22px;font-size:16px;color:var(--muted);max-width:44ch}
+.btn-cta{background:var(--forest);color:#fff;min-height:46px;padding:0 20px;font-size:15px}
+.btn-cta:hover{background:var(--forest-2)}
+.disclaimer{display:flex;gap:8px;margin:22px 0 0;padding:11px 14px;font-size:13px;
+  line-height:1.55;color:var(--muted);background:var(--surface);
+  border:1px solid var(--line);border-radius:10px;max-width:52ch}
+.disclaimer .ico{margin-top:3px;color:var(--info)}
+
+/* 현황 패널 */
+.panel{background:var(--forest);color:var(--on-forest);border-radius:16px;
+  padding:24px 24px 20px;box-shadow:var(--shadow)}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-bottom:16px}
+.panel-head h2{margin:0;font-size:15px;font-weight:600;color:#fff}
+.demo-tag{font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 9px;
+  border-radius:99px;background:rgba(255,255,255,.14);color:#cfe6d7;white-space:nowrap}
+.demo-tag-light{background:var(--warn-bg);color:var(--warn)}
+.panel-figure{margin:0 0 12px;display:flex;align-items:baseline;gap:10px}
+.figure-main{font-size:40px;font-weight:800;letter-spacing:-.03em;color:#fff;
+  font-variant-numeric:tabular-nums}
+.figure-label{font-size:13px;color:var(--on-forest-dim)}
+.panel-bar{height:7px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden;
+  margin-bottom:20px}
+.panel-bar span{display:block;height:100%;border-radius:99px;
+  background:linear-gradient(90deg,#4fb87c,#8fd6a8)}
+
+.status-grid{list-style:none;margin:0;padding:0;display:grid;
+  grid-template-columns:repeat(2,1fr);gap:10px}
+.status-card{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;
+  gap:0 10px;align-items:center;padding:12px 13px;border-radius:11px;
+  background:rgba(255,255,255,.07);border:1px solid var(--forest-line)}
+.status-ico{grid-row:1/3;display:grid;place-items:center;width:30px;height:30px;
+  border-radius:8px;background:rgba(255,255,255,.1)}
+.status-count{font-size:20px;font-weight:800;line-height:1.1;color:#fff;
+  font-variant-numeric:tabular-nums}
+.status-label{font-size:12px;color:var(--on-forest-dim)}
+.status-card.tone-alert .status-ico{color:#f0a868}
+.status-card.tone-warn  .status-ico{color:#f2c14e}
+.status-card.tone-error .status-ico{color:#f08a82}
+.status-card.tone-info  .status-ico{color:#7fc6dd}
+.panel-note{margin:16px 0 0;font-size:12px;color:var(--on-forest-dim);line-height:1.5}
+
+/* ================= 요약 지표 ================= */
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:8px}
+.metric{display:flex;gap:13px;align-items:flex-start;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;
+  box-shadow:var(--shadow)}
+.metric-ico{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;
+  background:var(--ok-bg);color:var(--ok);flex:none}
+.metric-value{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;line-height:1.2}
+.metric-label{margin:1px 0 0;font-size:13px;font-weight:600}
+.metric-hint{margin:2px 0 0;font-size:12px;color:var(--muted)}
+
+/* ================= 섹션 공통 ================= */
+.section-head{margin:40px 0 14px}
+.section-head h2{margin:0;font-size:19px;font-weight:700;letter-spacing:-.015em}
+.section-head h3{margin:0;font-size:15px;font-weight:700}
+.section-sub{margin:5px 0 0;font-size:13px;color:var(--muted);max-width:70ch}
+
+/* ================= 배지 ================= */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;
+  font-size:12.5px;font-weight:600;white-space:nowrap;
+  border:1px solid transparent;line-height:1.5}
+.badge-sign{font-size:11px;line-height:1}
+.badge.tone-ok{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.badge.tone-info{background:var(--info-bg);color:var(--info);border-color:var(--info)}
+.badge.tone-warn{background:var(--warn-bg);color:var(--warn);border-color:var(--warn)}
+.badge.tone-alert{background:var(--alert-bg);color:var(--alert);border-color:var(--alert)}
+.badge.tone-error{background:var(--error-bg);color:var(--error);border-color:var(--error)}
+.badge-sub{margin-left:5px;font-size:11.5px;padding:2px 8px}
+.badge-status{font-size:13px}
+
+/* ================= 테이블 ================= */
+.table-wrap{background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--radius);overflow-x:auto;box-shadow:var(--shadow)}
+.ops-table{width:100%;border-collapse:collapse;min-width:1020px;font-size:14px}
+.ops-table thead th{position:sticky;top:0;background:var(--surface-2);
+  text-align:left;font-size:12px;font-weight:700;color:var(--muted);
+  letter-spacing:.02em;padding:12px 14px;border-bottom:1px solid var(--line-strong);
+  white-space:nowrap}
+.ops-table td,.ops-table th[scope=row]{padding:14px;border-bottom:1px solid var(--line);
+  vertical-align:top;text-align:left}
+.ops-table tbody tr:last-child td,
+.ops-table tbody tr:last-child th{border-bottom:none}
+.ops-table tbody tr:hover{background:var(--surface-2)}
+.row-attention{background:var(--error-bg)}
+.row-attention:hover{background:var(--error-bg)}
+
+.plant-name{display:block;font-weight:700}
+.plant-id{display:block;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cell-zone,.cell-time{color:var(--muted);white-space:nowrap}
+.cell-time time{font-variant-numeric:tabular-nums}
+.cell-status{min-width:210px}
+.cell-note{display:block;margin-top:5px;font-size:12px;color:var(--muted);line-height:1.45}
+.cell-action{max-width:190px;line-height:1.45}
+.cell-us{white-space:nowrap}
+.us-main{display:block;font-weight:700;font-variant-numeric:tabular-nums}
+.us-unit{font-size:11px;font-weight:500;color:var(--muted);margin-left:3px}
+.us-sub{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+
+/* 모바일 카드 (기본 숨김) */
+.pcards{display:none;gap:12px}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:16px;box-shadow:var(--shadow);border-left-width:4px}
+.tone-edge-ok{border-left-color:var(--ok)}
+.tone-edge-info{border-left-color:var(--info)}
+.tone-edge-warn{border-left-color:var(--warn)}
+.tone-edge-error{border-left-color:var(--error)}
+.pcard-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.pcard-head p{margin:0}
+.pcard-time{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.pcard-status{margin:12px 0 0}
+.pcard-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 0}
+.pcard-grid dt{font-size:11.5px;color:var(--muted);margin-bottom:4px}
+.pcard-grid dd{margin:0;font-size:13.5px;font-weight:600}
+.pcard-action{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line);
+  font-size:13.5px}
+.pcard-action b{color:var(--muted);font-size:12px;margin-right:6px}
+
+/* ================= 알림 + 추세 ================= */
+.alerts{display:grid;grid-template-columns:1.15fr .85fr;gap:20px;align-items:start}
+.alert-list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.alert-item{display:flex;gap:13px;align-items:flex-start;background:var(--surface);
+  border:1px solid var(--line);border-left-width:4px;border-radius:var(--radius);
+  padding:15px 17px;box-shadow:var(--shadow)}
+.alert-item.tone-alert{border-left-color:var(--alert)}
+.alert-item.tone-warn{border-left-color:var(--warn)}
+.alert-item.tone-info{border-left-color:var(--info)}
+.alert-ico{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;flex:none}
+.tone-alert .alert-ico{background:var(--alert-bg);color:var(--alert)}
+.tone-warn .alert-ico{background:var(--warn-bg);color:var(--warn)}
+.tone-info .alert-ico{background:var(--info-bg);color:var(--info)}
+.alert-label{margin:0;font-weight:700;display:flex;align-items:baseline;gap:9px}
+.alert-count{font-size:13px;font-weight:700;color:var(--muted);
+  font-variant-numeric:tabular-nums}
+.alert-hint{margin:3px 0 0;font-size:13px;color:var(--muted);line-height:1.5}
+.alerts-foot{display:flex;gap:8px;margin:14px 0 0;font-size:12.5px;color:var(--muted);
+  line-height:1.55}
+.alerts-foot .ico{margin-top:3px;flex:none;color:var(--info)}
+
+.trend{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px;box-shadow:var(--shadow);margin-top:40px}
+.trend-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 10px}
+.trend-svg{width:100%;height:auto;display:block}
+.trend-svg .bar{fill:var(--ok);opacity:.85}
+.trend-svg .bar:hover{opacity:1}
+.trend-svg .axis{font-size:9px;fill:var(--muted)}
+.trend-svg .axis-line{stroke:var(--line-strong);stroke-width:1}
+.trend-note{margin:10px 0 0;font-size:11.5px;color:var(--muted);line-height:1.5}
+
+/* ================= 상태 화면 ================= */
+.state{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:64px 24px;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--radius);margin-top:40px}
+.state-error{border-color:var(--error);background:var(--error-bg)}
+.state-ico{color:var(--muted);margin-bottom:14px}
+.state-error .state-ico{color:var(--error)}
+.state-title{margin:0;font-size:17px;font-weight:700}
+.state-sub{margin:7px 0 0;font-size:14px;color:var(--muted);line-height:1.6}
+.state .btn{margin-top:20px}
+.spinner{width:32px;height:32px;border-radius:50%;margin-bottom:16px;
+  border:3px solid var(--line);border-top-color:var(--ok);
+  animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.skeleton-list{display:grid;gap:10px;width:100%;max-width:640px;margin-top:26px}
+.skeleton{height:46px;border-radius:10px;
+  background:linear-gradient(90deg,var(--surface-2) 25%,var(--line) 37%,var(--surface-2) 63%);
+  background-size:400% 100%;animation:shimmer 1.4s ease infinite}
+@keyframes shimmer{0%{background-position:100% 0}100%{background-position:0 0}}
+@media (prefers-reduced-motion:reduce){
+  .spinner,.skeleton{animation:none}
+}
+
+.report-note{margin-top:24px;padding:14px 16px;background:var(--info-bg);color:var(--info);
+  border-radius:10px;font-size:13.5px;line-height:1.55}
+
+/* ================= 푸터 ================= */
+.foot{max-width:1240px;margin:0 auto;padding:26px 24px 44px;border-top:1px solid var(--line)}
+.foot p{margin:0 0 6px;font-size:13px;color:var(--muted);line-height:1.6}
+.foot b{color:var(--text)}
+
+/* ================= 반응형 ================= */
+@media (max-width:1080px){
+  .hero{grid-template-columns:1fr;gap:28px;padding:36px 0 28px}
+  .hero h1{font-size:36px}
+  .alerts{grid-template-columns:1fr}
+  .trend{margin-top:8px}
+}
+
+@media (max-width:768px){
+  .wrap{padding:0 16px 48px}
+  .nav-inner{padding:0 16px;height:58px;gap:12px}
+  .nav-toggle{display:inline-flex}
+  .nav-menu{position:absolute;top:58px;left:0;right:0;display:none;flex-direction:column;
+    gap:2px;background:var(--forest-2);padding:10px 16px 14px;
+    border-bottom:1px solid var(--forest-line);margin:0}
+  .nav-menu.is-open{display:flex}
+  .nav-link{padding:12px 13px;min-height:44px;display:flex;align-items:center}
+  #btnReport span{display:none}
+  #btnReport{min-width:40px;padding:0 10px}
+
+  .hero{padding:26px 0 20px}
+  .hero h1{font-size:29px}
+  .lede{font-size:15px}
+  .panel{padding:18px}
+  .figure-main{font-size:32px}
+  .status-grid{grid-template-columns:1fr 1fr}
+
+  .metrics{grid-template-columns:1fr}
+  .section-head{margin:30px 0 12px}
+
+  /* 표 → 카드 */
+  .table-wrap{display:none}
+  .pcards{display:grid}
+  .pcard-grid{grid-template-columns:1fr}
+
+  .state{padding:44px 18px}
+}
+
+@media (max-width:380px){
+  .status-grid{grid-template-columns:1fr}
+}
+
+@media print{
+  .nav,.btn,.trend{display:none}
+  body{background:#fff}
+}
+
+/* 공유용 데모 상태 전환 바 */
+.statebar{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:50;
+  display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:99px;
+  background:var(--forest);color:var(--on-forest);box-shadow:0 6px 24px rgba(0,0,0,.22)}
+.statebar-label{font-size:11px;letter-spacing:.04em;color:var(--on-forest-dim);
+  padding:0 6px 0 4px;white-space:nowrap}
+.statebtn{min-height:32px;padding:0 12px;border-radius:99px;border:1px solid transparent;
+  background:rgba(255,255,255,.09);color:var(--on-forest);font:inherit;font-size:12.5px;
+  font-weight:600;cursor:pointer;white-space:nowrap}
+.statebtn:hover{background:rgba(255,255,255,.16)}
+.statebtn.is-on{background:#2f8f5b;color:#fff}
+@media (max-width:520px){
+  .statebar{left:12px;right:12px;transform:none;justify-content:center;flex-wrap:wrap}
+  .statebar-label{width:100%;text-align:center;padding:0 0 2px}
+}
+body{padding-bottom:72px}
+</style>
+<div id="root"></div>
+<script>/* ===== src/types.js ===== */
+/**
+ * 식물환자 OPS — 타입 정의 (JSDoc)
+ *
+ * 빌드 도구가 없는 프로젝트이므로 TypeScript 대신 JSDoc 으로 타입을 정의한다.
+ * 에디터에서 동일한 자동완성·타입 검사를 받을 수 있고, 실행에는 아무 영향이 없다.
+ *
+ * ★ 이 화면의 모든 수치는 UI 데모 데이터다. 실제 측정 결과가 아니다.
+ */
+
+/**
+ * 데이터 품질 — 측정이 쓸 만한가. **식물 상태와 별개다.**
+ * @typedef {'good'|'fair'|'low'|'error'} DataQuality
+ */
+
+/**
+ * 센서 연결 상태 — 장비가 살아 있는가. **데이터 품질과 별개다.**
+ * @typedef {'online'|'degraded'|'offline'} SensorState
+ */
+
+/**
+ * 보정 상태 — 값의 의미를 신뢰할 수 있는가.
+ * @typedef {'valid'|'due_soon'|'expired'} CalibrationState
+ */
+
+/**
+ * 식물에 대한 판단. **확정 표현을 쓰지 않는다.**
+ * - suspected_water_stress : 수분 스트레스 패턴 의심
+ * - remeasure_required     : 재측정 필요
+ * - check_recommended      : 추가 점검 권장
+ * - no_signal              : 특별한 신호 없음 (건강하다는 뜻이 아니다)
+ * @typedef {'suspected_water_stress'|'remeasure_required'|'check_recommended'|'no_signal'} PlantStatus
+ */
+
+/**
+ * @typedef {Object} UltrasoundSummary
+ * @property {number} eventsPerHour        시간당 이중마이크 확인 이벤트 수
+ * @property {number} eventsTotal          검출된 후보 이벤트 수
+ * @property {number} eventsConfirmed      이중 마이크 동시검출된 수
+ * @property {number|null} peakFrequencyHz 평균 피크 주파수 (없으면 null)
+ */
+
+/**
+ * @typedef {Object} PlantRow
+ * @property {string} id                예: 'TOM-03'
+ * @property {string} label             화면 표기명. 예: '토마토 #03'
+ * @property {string} zone              구역. 예: '온실 A-2'
+ * @property {string} lastMeasuredAt    'HH:MM'
+ * @property {DataQuality} dataQuality
+ * @property {SensorState} sensorState
+ * @property {CalibrationState} calibration
+ * @property {PlantStatus} status
+ * @property {string} action            필요한 조치 (한 줄)
+ * @property {UltrasoundSummary} ultrasound
+ * @property {number|null} soilVwc      토양 함수량 (보정 안 되면 null)
+ */
+
+/**
+ * @typedef {Object} StatusCount
+ * @property {string} key
+ * @property {string} label
+ * @property {number} count
+ * @property {'alert'|'warn'|'error'|'info'} tone
+ */
+
+/**
+ * @typedef {Object} FacilitySummary
+ * @property {string} facilityName        예: '온실 A'
+ * @property {number} measuredOk          정상 측정 건수
+ * @property {number} measuredTotal       전체 측정 건수
+ * @property {StatusCount[]} statusCards
+ * @property {{uptimePct:number, avgTempC:number, avgHumidityPct:number}} metrics
+ */
+
+/**
+ * @typedef {Object} OpsAlertGroup
+ * @property {string} key
+ * @property {string} label
+ * @property {number} count
+ * @property {'alert'|'warn'|'info'} tone
+ * @property {string} hint
+ */
+
+/**
+ * @typedef {Object} TrendPoint
+ * @property {string} t   시각 라벨
+ * @property {number} v   시간당 이벤트 수
+ */
+
+/**
+ * 데이터 계층이 돌려주는 전체 스냅샷.
+ * @typedef {Object} OpsSnapshot
+ * @property {FacilitySummary} facility
+ * @property {PlantRow[]} plants
+ * @property {OpsAlertGroup[]} alerts
+ * @property {TrendPoint[]} trend
+ * @property {boolean} isDemo   항상 true. 실데이터로 바뀌면 false
+ */
+
+/* ---------------------------------------------------------------- *
+ * 표시 사전 — 내부 값 → 사용자 문구
+ * 색만으로 정보를 전달하지 않기 위해 label 과 sign(기호)을 함께 둔다.
+ * ---------------------------------------------------------------- */
+
+const QUALITY_META = {
+  good:  { label: '좋음',  tone: 'ok',    sign: '●' },
+  fair:  { label: '보통',  tone: 'info',  sign: '◐' },
+  low:   { label: '낮음',  tone: 'warn',  sign: '◔' },
+  error: { label: '오류',  tone: 'error', sign: '×' },
+};
+
+const SENSOR_META = {
+  online:   { label: '정상',      tone: 'ok',    sign: '●' },
+  degraded: { label: '불안정',    tone: 'warn',  sign: '◐' },
+  offline:  { label: '연결 끊김', tone: 'error', sign: '×' },
+};
+
+const CALIBRATION_META = {
+  valid:    { label: '유효',      tone: 'ok',    sign: '●' },
+  due_soon: { label: '보정 예정', tone: 'warn',  sign: '◔' },
+  expired:  { label: '보정 만료', tone: 'error', sign: '×' },
+};
+
+const STATUS_META = {
+  suspected_water_stress: {
+    label: '수분 스트레스 패턴 의심',
+    tone: 'warn',
+    sign: '△',
+    note: '확정이 아니라 점검이 필요한 패턴입니다.',
+  },
+  remeasure_required: {
+    label: '재측정 필요',
+    tone: 'error',
+    sign: '↻',
+    note: '데이터 품질이 낮아 판단을 보류했습니다.',
+  },
+  check_recommended: {
+    label: '추가 점검 권장',
+    tone: 'warn',
+    sign: '?',
+    note: '신호가 엇갈립니다. 사람이 확인해 주세요.',
+  },
+  no_signal: {
+    label: '특별한 신호 없음',
+    tone: 'ok',
+    sign: '−',
+    note: '“건강함”을 뜻하지 않습니다.',
+  },
+};
+
+/* ===== src/icons.js ===== */
+/**
+ * 식물환자 OPS — 인라인 SVG 아이콘
+ *
+ * 이모지를 쓰지 않는다. 전부 currentColor 를 따르고, 장식용이므로
+ * aria-hidden 을 붙인다 (의미는 항상 텍스트가 전달한다).
+ */
+
+const wrap = (paths, { size = 16, stroke = 1.6 } = {}) =>
+  `<svg class="ico" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="${stroke}" stroke-linecap="round"
+        stroke-linejoin="round" aria-hidden="true" focusable="false">${paths}</svg>`;
+
+const icons = {
+  leaf: (o) => wrap('<path d="M11 20A7 7 0 0 1 4 13c0-5 4-9 16-9 0 12-4 16-9 16Z"/><path d="M4 20c4-6 8-8 12-9"/>', o),
+  gauge: (o) => wrap('<path d="M12 14v-4"/><path d="M4.5 18a9 9 0 1 1 15 0"/><circle cx="12" cy="18" r="1.4"/>', o),
+  alert: (o) => wrap('<path d="M12 4 2.5 20h19L12 4Z"/><path d="M12 10v4"/><path d="M12 17.5h.01"/>', o),
+  refresh: (o) => wrap('<path d="M20 11a8 8 0 1 0-1.6 5.6"/><path d="M20 5v6h-6"/>', o),
+  plug: (o) => wrap('<path d="M9 3v6"/><path d="M15 3v6"/><path d="M6 9h12v3a6 6 0 0 1-12 0V9Z"/><path d="M12 18v3"/>', o),
+  calibrate: (o) => wrap('<path d="M4 20h16"/><path d="M6 20V9"/><path d="M12 20V4"/><path d="M18 20v-7"/>', o),
+  thermo: (o) => wrap('<path d="M12 14V5a2 2 0 1 1 4 0v9a4 4 0 1 1-4 0Z" transform="translate(-2)"/>', o),
+  drop: (o) => wrap('<path d="M12 3s6 6.5 6 10.5A6 6 0 0 1 6 13.5C6 9.5 12 3 12 3Z"/>', o),
+  wave: (o) => wrap('<path d="M2 12h2l2-6 3 12 3-9 2.5 5H22"/>', o),
+  arrow: (o) => wrap('<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>', o),
+  menu: (o) => wrap('<path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/>', o),
+  close: (o) => wrap('<path d="M6 6l12 12"/><path d="M18 6 6 18"/>', o),
+  doc: (o) => wrap('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/>', o),
+  check: (o) => wrap('<path d="m5 13 4 4L19 7"/>', o),
+  info: (o) => wrap('<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/>', o),
+  empty: (o) => wrap('<path d="M4 8h16v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8Z"/><path d="M4 8 6 4h12l2 4"/><path d="M9 12h6"/>', o),
+};
+
+/** 상태 톤 → 아이콘 */
+const toneIcon = {
+  ok: icons.check,
+  info: icons.info,
+  warn: icons.alert,
+  alert: icons.alert,
+  error: icons.plug,
+};
+
+/* ===== src/mock-data.js ===== */
+/**
+ * 식물환자 OPS — 데모 데이터
+ *
+ * ★★ 전부 UI 데모용으로 만든 값이다. 실제 측정 결과가 아니며,
+ *    과학적으로 검증된 수치가 아니다. 화면에도 그렇게 표시한다. ★★
+ *
+ * 실제 백엔드가 붙으면 이 파일은 통째로 교체되고, data-source.js 의
+ * 인터페이스만 유지하면 된다.
+ */
+
+/** @type {import('./types.js').FacilitySummary} */
+const facility = {
+  facilityName: '온실 A',
+  measuredOk: 87,
+  measuredTotal: 96,
+  statusCards: [
+    { key: 'alert',     label: '경고',      count: 4, tone: 'alert' },
+    { key: 'remeasure', label: '재측정',    count: 3, tone: 'warn'  },
+    { key: 'sensor',    label: '센서 오류', count: 1, tone: 'error' },
+    { key: 'calib',     label: '보정 만료', count: 1, tone: 'info'  },
+  ],
+  metrics: { uptimePct: 98.4, avgTempC: 27.1, avgHumidityPct: 52 },
+};
+
+/** @type {import('./types.js').PlantRow[]} */
+const plants = [
+  {
+    id: 'TOM-03',
+    label: '토마토 #03',
+    zone: '온실 A-2',
+    lastMeasuredAt: '09:41',
+    dataQuality: 'good',
+    sensorState: 'online',
+    calibration: 'valid',
+    status: 'suspected_water_stress',
+    action: '토양 상태 점검',
+    ultrasound: { eventsPerHour: 38.4, eventsTotal: 15, eventsConfirmed: 13, peakFrequencyHz: 48900 },
+    soilVwc: 0.031,
+  },
+  {
+    id: 'TOM-07',
+    label: '토마토 #07',
+    zone: '온실 A-1',
+    lastMeasuredAt: '09:34',
+    dataQuality: 'low',
+    sensorState: 'online',
+    calibration: 'valid',
+    status: 'remeasure_required',
+    action: '주변 잡음 제거 후 재측정',
+    ultrasound: { eventsPerHour: 12.1, eventsTotal: 21, eventsConfirmed: 4, peakFrequencyHz: 41200 },
+    soilVwc: 0.074,
+  },
+  {
+    id: 'BAS-02',
+    label: '바질 #02',
+    zone: '온실 B-3',
+    lastMeasuredAt: '09:16',
+    dataQuality: 'error',
+    sensorState: 'offline',
+    calibration: 'due_soon',
+    status: 'remeasure_required',
+    action: 'BLE 연결 및 배터리 점검',
+    ultrasound: { eventsPerHour: 0, eventsTotal: 0, eventsConfirmed: 0, peakFrequencyHz: null },
+    soilVwc: null,
+    sensorNote: '센서 연결 확인',
+  },
+  {
+    id: 'TOM-11',
+    label: '토마토 #11',
+    zone: '온실 A-4',
+    lastMeasuredAt: '09:02',
+    dataQuality: 'fair',
+    sensorState: 'degraded',
+    calibration: 'expired',
+    status: 'check_recommended',
+    action: '토양수분 센서 재보정',
+    ultrasound: { eventsPerHour: 2.9, eventsTotal: 3, eventsConfirmed: 1, peakFrequencyHz: 52700 },
+    soilVwc: null,
+  },
+  {
+    id: 'TOM-15',
+    label: '토마토 #15',
+    zone: '온실 A-3',
+    lastMeasuredAt: '08:55',
+    dataQuality: 'good',
+    sensorState: 'online',
+    calibration: 'valid',
+    status: 'no_signal',
+    action: '평소 주기 유지',
+    ultrasound: { eventsPerHour: 0.6, eventsTotal: 1, eventsConfirmed: 0, peakFrequencyHz: null },
+    soilVwc: 0.186,
+  },
+];
+
+/** @type {import('./types.js').OpsAlertGroup[]} */
+const alerts = [
+  { key: 'remeasure', label: '재측정 우선', count: 3, tone: 'alert',
+    hint: '데이터 품질이 낮아 판단을 보류한 건입니다.' },
+  { key: 'sensor', label: '센서 점검', count: 1, tone: 'warn',
+    hint: '연결이 끊겼거나 값이 불안정합니다.' },
+  { key: 'calibration', label: '보정 예정', count: 1, tone: 'info',
+    hint: '보정이 만료되면 그 값은 판단에 쓰지 않습니다.' },
+];
+
+/** @type {import('./types.js').TrendPoint[]} */
+const trend = [
+  { t: '04', v: 6.2 }, { t: '05', v: 8.4 }, { t: '06', v: 14.1 },
+  { t: '07', v: 21.6 }, { t: '08', v: 29.3 }, { t: '09', v: 38.4 },
+  { t: '10', v: 33.7 }, { t: '11', v: 24.8 }, { t: '12', v: 17.2 },
+];
+
+/** @type {import('./types.js').OpsSnapshot} */
+const snapshot = { facility, plants, alerts, trend, isDemo: true };
+
+/** 빈 상태 확인용 */
+const emptySnapshot = {
+  facility: {
+    ...facility,
+    measuredOk: 0,
+    measuredTotal: 0,
+    statusCards: facility.statusCards.map((c) => ({ ...c, count: 0 })),
+    metrics: { uptimePct: 0, avgTempC: 0, avgHumidityPct: 0 },
+  },
+  plants: [],
+  alerts: alerts.map((a) => ({ ...a, count: 0 })),
+  trend: [],
+  isDemo: true,
+};
+
+/* ===== src/components.js ===== */
+/**
+ * 식물환자 OPS — 화면 조각
+ *
+ * 각 함수는 문자열 HTML 을 돌려주고, 부작용이 없다.
+ * 상태는 app.js 가 갖는다.
+ */
+
+
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g,
+  (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ------------------------------------------------------------------ */
+/* 배지 — 색 + 기호 + 텍스트를 항상 함께 쓴다                           */
+/* ------------------------------------------------------------------ */
+function badge(meta, extraClass = '') {
+  return `<span class="badge tone-${meta.tone} ${extraClass}">
+    <span class="badge-sign" aria-hidden="true">${meta.sign}</span>${esc(meta.label)}</span>`;
+}
+
+/* ------------------------------------------------------------------ */
+/* 상단 네비게이션                                                     */
+/* ------------------------------------------------------------------ */
+function nav() {
+  return `
+<header class="nav" role="banner">
+  <div class="nav-inner">
+    <a class="brand" href="#main" aria-label="식물환자 OPS 홈">
+      <span class="brand-mark" aria-hidden="true">${icons.leaf({ size: 20 })}</span>
+      <span class="brand-text">식물환자 <b>OPS</b></span>
+    </a>
+
+    <nav class="nav-menu" id="navMenu" aria-label="주요 메뉴">
+      <a href="#facility" class="nav-link is-current" aria-current="page">시설 현황</a>
+      <a href="#sensors" class="nav-link">센서 관리</a>
+      <a href="#alerts" class="nav-link">경고 기록</a>
+    </nav>
+
+    <div class="nav-actions">
+      <button type="button" class="btn btn-solid" id="btnReport">
+        ${icons.doc()}<span>운영 보고서</span>
+      </button>
+      <button type="button" class="btn btn-icon nav-toggle" id="navToggle"
+              aria-expanded="false" aria-controls="navMenu" aria-label="메뉴 열기">
+        ${icons.menu({ size: 20 })}
+      </button>
+    </div>
+  </div>
+</header>`;
+}
+
+/* ------------------------------------------------------------------ */
+/* 히어로                                                              */
+/* ------------------------------------------------------------------ */
+function hero(facility) {
+  const f = facility;
+  const pct = f.measuredTotal ? Math.round((f.measuredOk / f.measuredTotal) * 100) : 0;
+
+  const cards = f.statusCards.map((c) => `
+    <li class="status-card tone-${c.tone}">
+      <span class="status-ico" aria-hidden="true">${(toneIcon[c.tone] || icons.info)({ size: 16 })}</span>
+      <span class="status-count">${c.count}</span>
+      <span class="status-label">${esc(c.label)}</span>
+    </li>`).join('');
+
+  return `
+<section class="hero" id="facility" aria-labelledby="heroTitle">
+  <div class="hero-copy">
+    <p class="eyebrow">GREENHOUSE OPERATIONS</p>
+    <h1 id="heroTitle">온실 전체를<br>한눈에 관리</h1>
+    <p class="lede">여러 구역의 센서 상태와 재측정이 필요한 식물을 빠르게 확인하는
+      운영자용 화면입니다.</p>
+    <a class="btn btn-cta" href="#alerts">전체 경고 보기 ${icons.arrow({ size: 18 })}</a>
+    <p class="disclaimer">
+      ${icons.info({ size: 14 })}
+      <span>초음파 측정만으로 병해나 원인을 확정하지 않습니다. 모든 알림은
+        <b>점검이 필요한 상태</b>를 알리는 용도입니다.</span>
+    </p>
+  </div>
+
+  <aside class="panel" aria-labelledby="panelTitle">
+    <div class="panel-head">
+      <h2 id="panelTitle">${esc(f.facilityName)} · 현재 현황</h2>
+      <span class="demo-tag">데모 데이터</span>
+    </div>
+
+    <p class="panel-figure">
+      <span class="figure-main">${f.measuredOk} / ${f.measuredTotal}</span>
+      <span class="figure-label">정상 측정</span>
+    </p>
+
+    <div class="panel-bar" role="img"
+         aria-label="전체 ${f.measuredTotal}건 중 ${f.measuredOk}건 정상 측정, ${pct}퍼센트">
+      <span style="width:${pct}%"></span>
+    </div>
+
+    <ul class="status-grid">${cards}</ul>
+
+    <p class="panel-note">숫자는 측정·장비 상태 집계입니다. 식물의 건강 상태 판정이 아닙니다.</p>
+  </aside>
+</section>`;
+}
+
+/* ------------------------------------------------------------------ */
+/* 하단 요약 지표                                                      */
+/* ------------------------------------------------------------------ */
+function metrics(m) {
+  const items = [
+    { ico: icons.gauge, label: '가동률', value: `${m.uptimePct}%`,
+      hint: '측정 장비가 정상 동작한 비율' },
+    { ico: icons.thermo, label: '평균 온도', value: `${m.avgTempC}°C`,
+      hint: '구역 평균' },
+    { ico: icons.drop, label: '평균 습도', value: `${m.avgHumidityPct}%`,
+      hint: '초음파 감쇠에 영향을 줍니다' },
+  ];
+  return `
+<section class="metrics" aria-label="시설 요약 지표">
+  ${items.map((i) => `
+    <article class="metric">
+      <span class="metric-ico" aria-hidden="true">${i.ico({ size: 18 })}</span>
+      <div>
+        <p class="metric-value">${esc(i.value)}</p>
+        <p class="metric-label">${esc(i.label)}</p>
+        <p class="metric-hint">${esc(i.hint)}</p>
+      </div>
+    </article>`).join('')}
+</section>`;
+}
+
+/* ------------------------------------------------------------------ */
+/* 운영 테이블 (데스크톱) / 카드 (모바일) — 같은 데이터, 한 번만 렌더   */
+/* ------------------------------------------------------------------ */
+function plantTable(plants) {
+  if (!plants.length) return emptyState();
+
+  const row = (p) => {
+    const q = QUALITY_META[p.dataQuality];
+    const s = STATUS_META[p.status];
+    const sensor = SENSOR_META[p.sensorState];
+    const cal = CALIBRATION_META[p.calibration];
+    const sensorIssue = p.sensorState !== 'online' || p.calibration === 'expired';
+
+    return `
+<tr class="${sensorIssue ? 'row-attention' : ''}">
+  <th scope="row" class="cell-plant">
+    <span class="plant-name">${esc(p.label)}</span>
+    <span class="plant-id">${esc(p.id)}</span>
+  </th>
+  <td class="cell-zone">${esc(p.zone)}</td>
+  <td class="cell-time"><time>${esc(p.lastMeasuredAt)}</time></td>
+  <td>${badge(q)}</td>
+  <td class="cell-sensor">
+    ${badge(sensor)}
+    ${p.calibration !== 'valid' ? badge(cal, 'badge-sub') : ''}
+  </td>
+  <td class="cell-status">
+    ${badge(s, 'badge-status')}
+    <span class="cell-note">${esc(s.note)}</span>
+  </td>
+  <td class="cell-action">${esc(p.action)}</td>
+  <td class="cell-us">
+    <span class="us-main">${p.ultrasound.eventsPerHour.toFixed(1)}<span class="us-unit">회/시간</span></span>
+    <span class="us-sub">확인 ${p.ultrasound.eventsConfirmed} / 검출 ${p.ultrasound.eventsTotal}</span>
+  </td>
+</tr>`;
+  };
+
+  const card = (p) => {
+    const q = QUALITY_META[p.dataQuality];
+    const s = STATUS_META[p.status];
+    const sensor = SENSOR_META[p.sensorState];
+    const cal = CALIBRATION_META[p.calibration];
+    return `
+<article class="pcard tone-edge-${s.tone}">
+  <header class="pcard-head">
+    <div>
+      <p class="plant-name">${esc(p.label)}</p>
+      <p class="plant-id">${esc(p.id)} · ${esc(p.zone)}</p>
+    </div>
+    <time class="pcard-time">${esc(p.lastMeasuredAt)}</time>
+  </header>
+  <p class="pcard-status">${badge(s, 'badge-status')}</p>
+  <p class="cell-note">${esc(s.note)}</p>
+  <dl class="pcard-grid">
+    <div><dt>데이터 품질</dt><dd>${badge(q)}</dd></div>
+    <div><dt>센서 상태</dt><dd>${badge(sensor)}</dd></div>
+    <div><dt>보정</dt><dd>${badge(cal)}</dd></div>
+    <div><dt>초음파 이벤트</dt>
+      <dd>${p.ultrasound.eventsPerHour.toFixed(1)} 회/시간
+        <span class="us-sub">확인 ${p.ultrasound.eventsConfirmed} / 검출 ${p.ultrasound.eventsTotal}</span></dd></div>
+  </dl>
+  <p class="pcard-action"><b>필요한 조치</b> ${esc(p.action)}</p>
+</article>`;
+  };
+
+  return `
+<section class="board" id="sensors" aria-labelledby="boardTitle">
+  <div class="section-head">
+    <h2 id="boardTitle">구역별 측정 현황</h2>
+    <p class="section-sub">데이터 품질 · 센서 상태 · 보정은 서로 다른 항목입니다.
+      셋 다 정상이어야 판정을 신뢰할 수 있습니다.</p>
+  </div>
+
+  <div class="table-wrap" tabindex="0" role="region" aria-labelledby="boardTitle">
+    <table class="ops-table">
+      <caption class="sr-only">식물별 최근 측정 결과와 필요한 조치. 데모 데이터입니다.</caption>
+      <thead>
+        <tr>
+          <th scope="col">식물</th><th scope="col">구역</th><th scope="col">최근 측정</th>
+          <th scope="col">데이터 품질</th><th scope="col">센서 · 보정</th>
+          <th scope="col">현재 상태</th><th scope="col">필요한 조치</th>
+          <th scope="col">초음파 이벤트</th>
+        </tr>
+      </thead>
+      <tbody>${plants.map(row).join('')}</tbody>
+    </table>
+  </div>
+
+  <div class="pcards">${plants.map(card).join('')}</div>
+</section>`;
+}
+
+/* ------------------------------------------------------------------ */
+/* 오늘의 운영 알림 + 추세 차트                                        */
+/* ------------------------------------------------------------------ */
+function alertPanel(alerts, trend) {
+  const items = alerts.map((a) => `
+    <li class="alert-item tone-${a.tone}">
+      <span class="alert-ico" aria-hidden="true">${(toneIcon[a.tone] || icons.info)({ size: 18 })}</span>
+      <div class="alert-body">
+        <p class="alert-label">${esc(a.label)}
+          <span class="alert-count">${a.count}건</span></p>
+        <p class="alert-hint">${esc(a.hint)}</p>
+      </div>
+    </li>`).join('');
+
+  return `
+<section class="alerts" id="alerts" aria-labelledby="alertsTitle">
+  <div class="alerts-main">
+    <div class="section-head">
+      <h2 id="alertsTitle">오늘의 운영 알림</h2>
+      <p class="section-sub">식물 상태 확정이 아닌, 데이터 기반 점검 알림입니다.</p>
+    </div>
+    <ul class="alert-list">${items}</ul>
+    <p class="alerts-foot">
+      ${icons.info({ size: 14 })}
+      <span>모든 항목은 <b>의심 · 재측정 필요 · 추가 점검 권장</b>까지만 표현합니다.
+        원인 확정이나 처방은 이 화면의 역할이 아닙니다.</span>
+    </p>
+  </div>
+  ${trendChart(trend)}
+</section>`;
+}
+
+function trendChart(points) {
+  if (!points || !points.length) {
+    return `<aside class="trend"><div class="section-head">
+      <h3>초음파 이벤트 추세</h3></div>
+      <p class="muted small">표시할 데이터가 없습니다.</p></aside>`;
+  }
+  const w = 360, h = 132, padL = 30, padB = 22, padT = 10;
+  const max = Math.max(...points.map((p) => p.v)) * 1.15 || 1;
+  const bw = (w - padL - 10) / points.length;
+
+  const bars = points.map((p, i) => {
+    const bh = (p.v / max) * (h - padT - padB);
+    const x = padL + i * bw + bw * 0.18;
+    const y = h - padB - bh;
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(bw * 0.64).toFixed(1)}"
+      height="${Math.max(bh, 1).toFixed(1)}" rx="2" class="bar"><title>${esc(p.t)}시 · ${p.v} 회/시간</title></rect>`;
+  }).join('');
+
+  const labels = points.map((p, i) => (i % 2 === 0
+    ? `<text x="${(padL + i * bw + bw / 2).toFixed(1)}" y="${h - 7}" class="axis"
+        text-anchor="middle">${esc(p.t)}</text>` : '')).join('');
+
+  return `
+<aside class="trend" aria-labelledby="trendTitle">
+  <div class="section-head trend-head">
+    <h3 id="trendTitle">초음파 이벤트 추세</h3>
+    <span class="demo-tag demo-tag-light">데모 데이터</span>
+  </div>
+  <svg viewBox="0 0 ${w} ${h}" class="trend-svg" role="img"
+       aria-label="시간대별 초음파 이벤트 추세 막대 그래프. 데모 데이터입니다.">
+    <line x1="${padL}" y1="${h - padB}" x2="${w - 6}" y2="${h - padB}" class="axis-line"/>
+    <text x="4" y="${padT + 8}" class="axis">${Math.round(max)}</text>
+    <text x="4" y="${h - padB}" class="axis">0</text>
+    ${bars}${labels}
+  </svg>
+  <p class="trend-note">단위: 시간당 이중 마이크 확인 이벤트 수.
+    수치는 예시이며 검증된 측정값이 아닙니다.</p>
+</aside>`;
+}
+
+/* ------------------------------------------------------------------ */
+/* 상태 화면                                                           */
+/* ------------------------------------------------------------------ */
+function loadingState() {
+  return `
+<section class="state" aria-live="polite" aria-busy="true">
+  <div class="spinner" aria-hidden="true"></div>
+  <p class="state-title">측정 현황을 불러오는 중입니다</p>
+  <p class="state-sub">잠시만 기다려 주세요.</p>
+  <div class="skeleton-list" aria-hidden="true">
+    ${'<div class="skeleton"></div>'.repeat(4)}
+  </div>
+</section>`;
+}
+
+function emptyState() {
+  return `
+<section class="state" role="status">
+  <span class="state-ico" aria-hidden="true">${icons.empty({ size: 34 })}</span>
+  <p class="state-title">표시할 측정 기록이 없습니다</p>
+  <p class="state-sub">아직 이 시설에서 완료된 측정이 없습니다.<br>
+    장치를 식물 옆에 두고 측정을 시작하면 이곳에 나타납니다.</p>
+</section>`;
+}
+
+function errorState(message) {
+  return `
+<section class="state state-error" role="alert">
+  <span class="state-ico" aria-hidden="true">${icons.alert({ size: 34 })}</span>
+  <p class="state-title">현황을 불러오지 못했습니다</p>
+  <p class="state-sub">${esc(message || '알 수 없는 오류가 발생했습니다.')}</p>
+  <p class="state-sub">측정 데이터는 장치에 계속 저장됩니다. 화면이 비어 있어도
+    기록이 사라진 것은 아닙니다.</p>
+  <button type="button" class="btn btn-solid" id="btnRetry">${icons.refresh()}<span>다시 시도</span></button>
+</section>`;
+}
+
+function footer() {
+  return `
+<footer class="foot">
+  <p><b>식물환자</b>는 식물 관리용 조기 점검 도구입니다.
+    의료·농업 처방 시스템이 아니며, 병해를 확진하거나 약제를 처방하지 않습니다.</p>
+  <p class="muted small">이 화면의 모든 수치는 UI 데모 데이터입니다.
+    과학적으로 검증된 측정 결과가 아닙니다.</p>
+</footer>`;
+}
+
+
+/* ===== 단독 실행 부트스트랩 (공유용) ===== */
+const root = document.getElementById('root');
+const SNAP = { ready: snapshot, empty: emptySnapshot };
+
+function shell(main){
+  root.innerHTML = nav() + '<main id="main" class="wrap" tabindex="-1">' + main + '</main>' + footer() + switcher();
+  wire();
+}
+function switcher(){
+  return `<div class="statebar" role="group" aria-label="데모 상태 전환">
+    <span class="statebar-label">데모 상태</span>
+    ${['정상','로딩','데이터 없음','오류'].map((l,i)=>
+      `<button type="button" class="statebtn${i===0?' is-on':''}" data-state="${['ready','loading','empty','error'][i]}">${l}</button>`).join('')}
+  </div>`;
+}
+function wire(){
+  const t = document.getElementById('navToggle'), m = document.getElementById('navMenu');
+  if (t && m) t.addEventListener('click', () => {
+    const open = m.classList.toggle('is-open');
+    t.setAttribute('aria-expanded', String(open));
+    t.setAttribute('aria-label', open ? '메뉴 닫기' : '메뉴 열기');
+  });
+  const rep = document.getElementById('btnReport');
+  if (rep) rep.addEventListener('click', () => {
+    const b = document.getElementById('reportNote');
+    if (b) { b.hidden = false; b.focus(); }
+  });
+  document.querySelectorAll('.statebtn').forEach(b =>
+    b.addEventListener('click', () => render(b.dataset.state)));
+  const retry = document.getElementById('btnRetry');
+  if (retry) retry.addEventListener('click', () => render('ready'));
+}
+function render(state){
+  if (state === 'loading') { shell(loadingState()); mark(state); return; }
+  if (state === 'error') { shell(errorState('측정 서버에 연결하지 못했습니다.')); mark(state); return; }
+  const s = SNAP[state === 'empty' ? 'empty' : 'ready'];
+  shell([
+    hero(s.facility), metrics(s.facility.metrics),
+    s.plants.length ? plantTable(s.plants) : emptyState(),
+    alertPanel(s.alerts, s.trend),
+    '<div class="report-note" id="reportNote" tabindex="-1" hidden role="status">운영 보고서 내보내기는 아직 연결되지 않았습니다. 현재 화면의 수치는 데모 데이터이므로 보고서로 내보내지 않습니다.</div>'
+  ].join(''));
+  mark(state);
+}
+function mark(state){
+  document.querySelectorAll('.statebtn').forEach(b =>
+    b.classList.toggle('is-on', b.dataset.state === state));
+}
+render('ready');
+</script>
