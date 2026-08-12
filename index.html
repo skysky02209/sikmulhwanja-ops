@@ -309,9 +309,11 @@ body{
   .metrics{grid-template-columns:1fr}
   .section-head{margin:30px 0 12px}
 
-  /* 표 → 카드 */
-  .table-wrap{display:none}
+  /* 운영 표만 카드로 전환한다. 검증 표(.val-table)는 가로 스크롤로 유지 —
+     여기서 통째로 숨기면 모바일에서 실측 수치가 사라진다. */
+  .board .table-wrap{display:none}
   .pcards{display:grid}
+  .validation .table-wrap{display:block}
   .pcard-grid{grid-template-columns:1fr}
 
   .state{padding:44px 18px}
@@ -324,6 +326,54 @@ body{
 @media print{
   .nav,.btn,.trend{display:none}
   body{background:#fff}
+}
+
+/* ================= 검증 현황 (실측) ================= */
+.validation{margin-top:44px;padding-top:32px;border-top:2px solid var(--line-strong)}
+.validation h3{margin:28px 0 10px;font-size:15.5px;font-weight:700}
+.validation h3:first-of-type{margin-top:20px}
+
+.banner-inline{display:flex;gap:9px;align-items:flex-start;background:var(--info-bg);
+  color:var(--info);border-radius:10px;padding:12px 15px;font-size:13px;line-height:1.6;
+  margin:14px 0 4px}
+.banner-inline .ico{margin-top:3px;flex:none}
+.banner-inline b{color:inherit}
+
+.val-table{min-width:560px}
+.val-table th[scope=row]{font-weight:700}
+.val-table .plant-id{font-weight:400}
+
+.spec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:10px;margin:12px 0}
+.kv-accent{border-color:var(--ok);background:var(--ok-bg)}
+.kv-accent .v{color:var(--ok)}
+
+.curve{width:100%;height:auto;display:block}
+.curve .curve-line{fill:none;stroke:var(--ok);stroke-width:2.2;
+  stroke-linejoin:round;stroke-linecap:round}
+.curve .curve-area{fill:var(--ok);opacity:.12;stroke:none}
+.curve .pt{fill:var(--ok)}
+.curve .grid{stroke:var(--line);stroke-width:1}
+.curve .ref{stroke:var(--warn);stroke-width:1.2;stroke-dasharray:5 4;opacity:.8}
+.curve .axis{font-size:9.5px;fill:var(--muted)}
+
+.vstack{display:grid;gap:10px;margin-top:12px}
+.vcard{background:var(--surface);border:1px solid var(--line);border-left-width:4px;
+  border-radius:var(--radius);padding:14px 17px;box-shadow:var(--shadow)}
+.vcard.tone-ok{border-left-color:var(--ok)}
+.vcard.tone-warn{border-left-color:var(--warn)}
+.vcard.tone-error{border-left-color:var(--error)}
+.vcard-title{display:flex;align-items:center;gap:7px;margin:0 0 6px;
+  font-weight:700;font-size:14px}
+.vcard.tone-ok .vcard-title{color:var(--ok)}
+.vcard.tone-warn .vcard-title{color:var(--warn)}
+.vcard.tone-error .vcard-title{color:var(--error)}
+.vlist{margin:0;padding-left:19px;font-size:13.5px;line-height:1.65}
+.vlist li{margin:4px 0}
+
+@media (max-width:768px){
+  .validation{margin-top:32px}
+  .spec-grid{grid-template-columns:1fr}
 }
 
 /* 공유용 데모 상태 전환 바 */
@@ -665,6 +715,93 @@ const emptySnapshot = {
   isDemo: true,
 };
 
+/* ===== src/validation-data.js ===== */
+/**
+ * 식물환자 — 검증 현황 데이터
+ *
+ * ★ 이 파일의 수치만 실측이다. mock-data.js 는 데모다. 섞지 않는다. ★
+ *
+ * 출처: Khait et al. 2023, Cell 186(7):1328-1336.e10 (CC0 데이터)
+ *       https://doi.org/10.1016/j.cell.2023.03.009
+ *       데이터 https://doi.org/10.5061/dryad.jwstqjqf7
+ *
+ * 이 값들은 **공개된 외부 녹음**으로 우리 신호처리를 검증한 결과다.
+ * 우리 장비로 측정한 것이 아니다.
+ */
+
+/** @typedef {'measured'|'derived'|'blocked'} EvidenceKind */
+
+const validation = {
+  source: {
+    title: 'Khait et al. 2023, Cell',
+    doi: 'https://doi.org/10.1016/j.cell.2023.03.009',
+    dataDoi: 'https://doi.org/10.5061/dryad.jwstqjqf7',
+    license: 'CC0 1.0',
+    clips: 5477,
+    plantsTomatoDry: 64,
+    spec: '500 kHz · 16bit · 모노 · 클립당 2 ms',
+  },
+
+  /** 문헌 값과 우리 측정을 대조한 결과 */
+  literatureMatch: [
+    { label: '건조 토마토', plants: 48, measuredKhz: 48.15, literatureKhz: 49.6,
+      toleranceKhz: 5, ok: true },
+    { label: '건조 담배', plants: 35, measuredKhz: 52.44, literatureKhz: 54.8,
+      toleranceKhz: 5, ok: true },
+  ],
+
+  /** 카테고리별 특징 — 왜 구분이 어려운지 보여준다 */
+  separability: [
+    { label: '건조 토마토', peakKhz: 48.15, durationMs: 0.044, lowBand: 0.28, isPlant: true },
+    { label: '빈 화분 (마이크 자체 잡음)', peakKhz: 53.37, durationMs: 0.030, lowBand: 0.25, isPlant: false },
+    { label: '온실 배경잡음', peakKhz: 34.52, durationMs: 0.788, lowBand: 0.61, isPlant: false },
+  ],
+
+  /** 실제 클립을 감쇠시키며 잰 검출률 */
+  detectionCurve: [
+    { gainDb: 0, recall: 1.00 },
+    { gainDb: -20, recall: 0.88 },
+    { gainDb: -28, recall: 0.40 },
+    { gainDb: -34, recall: 0.24 },
+    { gainDb: -38, recall: 0.12 },
+    { gainDb: -42, recall: 0.00 },
+  ],
+
+  /** 검출 한계에서 유도한 구매 사양 */
+  derivedSpec: {
+    halfRecallGainDb: -26.3,
+    snrAtHalfRecallDb: 18.2,
+    literatureSignalDbSpl: 61.6,
+    selfNoiseLimitDbSpl: 43,
+    selfNoiseTargetDbSpl: 35,
+  },
+
+  /** 검출 단계가 잡음을 걸러내는가 */
+  noiseRejection: [
+    { label: '온실 배경잡음', placed: 8, detected: 8 },
+    { label: '빈 화분', placed: 8, detected: 8 },
+  ],
+
+  /** 화면에 그대로 띄우는 상태 구분 */
+  status: {
+    measured: [
+      '우리 특징 추출이 실제 식물 소리에서 문헌 값을 재현했다',
+      '검출기가 없는 신호를 만들어내지 않는다 (원인불명 거짓양성 0건)',
+      '검출 한계에서 마이크 자기잡음 요구치를 유도했다',
+    ],
+    problems: [
+      '빈 화분 잡음의 피크 주파수가 식물 소리와 거의 같다',
+      '검출 단계는 두 종류 잡음을 100% 그대로 통과시킨다',
+      '구분은 전적으로 이중 마이크·특징·분류가 해야 한다',
+    ],
+    blocked: [
+      '우리 장비로 측정한 데이터: 0건',
+      '기준 장비 비교(V1 관문): 미수행 — 장비 미확보',
+      '위 수치는 전부 남의 장비로 녹음된 공개 데이터 기반이다',
+    ],
+  },
+};
+
 /* ===== src/components.js ===== */
 /**
  * 식물환자 OPS — 화면 조각
@@ -701,6 +838,7 @@ function nav() {
       <a href="#facility" class="nav-link is-current" aria-current="page">시설 현황</a>
       <a href="#sensors" class="nav-link">센서 관리</a>
       <a href="#alerts" class="nav-link">경고 기록</a>
+      <a href="#validation" class="nav-link">검증 현황</a>
     </nav>
 
     <div class="nav-actions">
@@ -741,7 +879,9 @@ function hero(facility) {
     <p class="disclaimer">
       ${icons.info({ size: 14 })}
       <span>초음파 측정만으로 병해나 원인을 확정하지 않습니다. 모든 알림은
-        <b>점검이 필요한 상태</b>를 알리는 용도입니다.</span>
+        <b>점검이 필요한 상태</b>를 알리는 용도입니다.
+        아래 운영 화면은 <b>데모 데이터</b>이고,
+        <a href="#validation">검증 현황</a>은 <b>실제 측정 결과</b>입니다.</span>
     </p>
   </div>
 
@@ -1006,6 +1146,162 @@ function footer() {
 </footer>`;
 }
 
+/* ------------------------------------------------------------------ */
+/* 검증 현황 — 실측과 데모를 화면에서 갈라 놓는다                        */
+/* ------------------------------------------------------------------ */
+function validationPanel(v) {
+  const d = v.derivedSpec;
+
+  const match = v.literatureMatch.map((m) => `
+    <tr>
+      <th scope="row">${esc(m.label)}<span class="plant-id">개체 ${m.plants}</span></th>
+      <td class="num"><b>${m.measuredKhz.toFixed(2)}</b> kHz</td>
+      <td class="num">${m.literatureKhz.toFixed(1)} kHz</td>
+      <td class="num">${(m.measuredKhz - m.literatureKhz > 0 ? '+' : '')}${(m.measuredKhz - m.literatureKhz).toFixed(2)}</td>
+      <td>${m.ok ? '<span class="badge tone-ok"><span class="badge-sign">●</span>일치</span>'
+                 : '<span class="badge tone-error"><span class="badge-sign">×</span>불일치</span>'}</td>
+    </tr>`).join('');
+
+  const sep = v.separability.map((s) => `
+    <tr class="${s.isPlant ? '' : 'row-attention'}">
+      <th scope="row">${esc(s.label)}</th>
+      <td class="num">${s.peakKhz.toFixed(2)} kHz</td>
+      <td class="num">${s.durationMs.toFixed(3)} ms</td>
+      <td class="num">${s.lowBand.toFixed(2)}</td>
+      <td>${s.isPlant ? '<span class="badge tone-ok"><span class="badge-sign">●</span>식물</span>'
+                      : '<span class="badge tone-warn"><span class="badge-sign">△</span>잡음</span>'}</td>
+    </tr>`).join('');
+
+  const rej = v.noiseRejection.map((n) => `
+    <li class="alert-item tone-warn">
+      <span class="alert-ico" aria-hidden="true">${icons.alert({ size: 18 })}</span>
+      <div class="alert-body">
+        <p class="alert-label">${esc(n.label)}
+          <span class="alert-count">${n.detected} / ${n.placed} 검출</span></p>
+        <p class="alert-hint">검출 단계에서 걸러지지 않았습니다.</p>
+      </div>
+    </li>`).join('');
+
+  const list = (items, tone) => `<ul class="vlist tone-${tone}">${
+    items.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>`;
+
+  return `
+<section class="validation" id="validation" aria-labelledby="valTitle">
+  <div class="section-head">
+    <h2 id="valTitle">검증 현황 — 실제 측정 결과</h2>
+    <p class="section-sub">
+      위의 운영 화면은 <b>데모 데이터</b>입니다. 아래는 <b>공개된 실제 녹음</b>으로
+      우리 신호처리를 검증한 결과이며, 성격이 다릅니다.
+    </p>
+  </div>
+
+  <div class="banner-inline">
+    ${icons.info({ size: 15 })}
+    <span>출처: <b>${esc(v.source.title)}</b> (${esc(v.source.license)}) ·
+      ${v.source.clips.toLocaleString()}개 녹음 · ${esc(v.source.spec)} ·
+      건조 토마토 ${v.source.plantsTomatoDry}개체.
+      <b>우리 장비로 측정한 것이 아닙니다.</b></span>
+  </div>
+
+  <h3>1. 문헌 값 재현 — 특징 추출이 맞는가</h3>
+  <div class="table-wrap"><table class="ops-table val-table">
+    <thead><tr><th scope="col">대상</th><th scope="col">우리 측정</th>
+      <th scope="col">문헌 보고</th><th scope="col">차이</th><th scope="col">판정</th></tr></thead>
+    <tbody>${match}</tbody>
+  </table></div>
+  <p class="note">허용 오차 5 kHz. 우리 특징 추출기가 실제 식물 소리에서 논문과 같은 값을 냅니다.</p>
+
+  <h3>2. ⚠️ 그런데 잡음과 구분이 안 됩니다</h3>
+  <div class="table-wrap"><table class="ops-table val-table">
+    <thead><tr><th scope="col">대상</th><th scope="col">피크 주파수</th>
+      <th scope="col">지속시간</th><th scope="col">20–40kHz 에너지</th>
+      <th scope="col">구분</th></tr></thead>
+    <tbody>${sep}</tbody>
+  </table></div>
+  <p class="note"><b>빈 화분(마이크 자체 잡음)의 피크 주파수가 식물 소리와 거의 같습니다.</b>
+    주파수 하나로는 갈리지 않습니다.</p>
+
+  <h3>3. 검출 단계의 잡음 구분력</h3>
+  <ul class="alert-list">${rej}</ul>
+  <p class="note">검출 임계값을 올려서 해결할 문제가 아닙니다 — 잡음이 식물 소리만큼 강합니다.
+    구분은 이중 마이크 동시검출과 특징·분류가 해야 합니다.</p>
+
+  <h3>4. 검출 한계에서 유도한 마이크 사양</h3>
+  <div class="spec-grid">
+    <div class="kv">
+      <div class="k">50% 검출 지점</div>
+      <div class="v">${d.snrAtHalfRecallDb.toFixed(1)} dB</div>
+      <div class="sub">잡음 바닥 대비 (감쇠 ${d.halfRecallGainDb} dB)</div>
+    </div>
+    <div class="kv">
+      <div class="k">문헌 신호 세기</div>
+      <div class="v">${d.literatureSignalDbSpl} dBSPL</div>
+      <div class="sub">건조 토마토 @10 cm</div>
+    </div>
+    <div class="kv kv-accent">
+      <div class="k">필요 자기잡음 (하한)</div>
+      <div class="v">≲ ${d.selfNoiseLimitDbSpl} dBSPL</div>
+      <div class="sub">목표 ≤ ${d.selfNoiseTargetDbSpl} dBSPL</div>
+    </div>
+  </div>
+  ${detectionCurveChart(v.detectionCurve)}
+  <p class="note">이전까지 “충분한 마진”이라고만 적혀 있던 구매 사양이 숫자가 됐습니다.
+    <b>유도값이며 하드웨어 실측으로 확인해야 합니다.</b></p>
+
+  <h3>5. 정리</h3>
+  <div class="vstack">
+    <div class="vcard tone-ok">
+      <p class="vcard-title">${icons.check({ size: 15 })} 실측으로 확인된 것</p>
+      ${list(v.status.measured, 'ok')}
+    </div>
+    <div class="vcard tone-warn">
+      <p class="vcard-title">${icons.alert({ size: 15 })} 확인된 문제</p>
+      ${list(v.status.problems, 'warn')}
+    </div>
+    <div class="vcard tone-error">
+      <p class="vcard-title">${icons.plug({ size: 15 })} 아직 못 한 것</p>
+      ${list(v.status.blocked, 'error')}
+    </div>
+  </div>
+</section>`;
+}
+
+function detectionCurveChart(points) {
+  const w = 620, h = 170, padL = 46, padR = 14, padB = 32, padT = 12;
+  const pw = w - padL - padR, ph = h - padT - padB;
+  const xs = points.map((p) => p.gainDb);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const X = (g) => padL + ((g - minX) / (maxX - minX)) * pw;
+  const Y = (r) => padT + ph - r * ph;
+
+  const line = points.map((p) => `${X(p.gainDb).toFixed(1)},${Y(p.recall).toFixed(1)}`).join(' ');
+  const area = `${padL},${padT + ph} ${line} ${X(maxX).toFixed(1)},${padT + ph}`;
+  const dots = points.map((p) =>
+    `<circle cx="${X(p.gainDb).toFixed(1)}" cy="${Y(p.recall).toFixed(1)}" r="3.4"
+       class="pt"><title>감쇠 ${p.gainDb} dB · 재현율 ${p.recall.toFixed(2)}</title></circle>`).join('');
+  const xlab = points.map((p) =>
+    `<text x="${X(p.gainDb).toFixed(1)}" y="${h - 10}" class="axis" text-anchor="middle">${p.gainDb}</text>`).join('');
+  const grid = [0, 0.5, 1].map((r) =>
+    `<line x1="${padL}" y1="${Y(r).toFixed(1)}" x2="${w - padR}" y2="${Y(r).toFixed(1)}" class="grid"/>
+     <text x="${padL - 8}" y="${(Y(r) + 4).toFixed(1)}" class="axis" text-anchor="end">${r.toFixed(1)}</text>`).join('');
+
+  return `
+<div class="chartbox">
+  <svg viewBox="0 0 ${w} ${h}" class="curve" role="img"
+       aria-label="이벤트 세기 감쇠에 따른 검출 재현율 곡선. 0 dB에서 1.00, -42 dB에서 0.00.">
+    ${grid}
+    <polygon points="${area}" class="curve-area"/>
+    <polyline points="${line}" class="curve-line"/>
+    <line x1="${padL}" y1="${Y(0.5).toFixed(1)}" x2="${w - padR}" y2="${Y(0.5).toFixed(1)}" class="ref"/>
+    ${dots}${xlab}
+    <text x="${padL}" y="${padT + 8}" class="axis">재현율</text>
+    <text x="${w - padR}" y="${h - 10}" class="axis" text-anchor="end">감쇠(dB)</text>
+  </svg>
+  <p class="trend-note">실제 토마토 녹음을 감쇠시키며 측정. 점선은 50% 기준선.
+    이벤트 밀도는 통계 확보를 위해 올린 값이며 문헌 방출률이 아닙니다.</p>
+</div>`;
+}
+
 
 /* ===== 단독 실행 부트스트랩 (공유용) ===== */
 const root = document.getElementById('root');
@@ -1047,6 +1343,7 @@ function render(state){
     hero(s.facility), metrics(s.facility.metrics),
     s.plants.length ? plantTable(s.plants) : emptyState(),
     alertPanel(s.alerts, s.trend),
+    validationPanel(validation),
     '<div class="report-note" id="reportNote" tabindex="-1" hidden role="status">운영 보고서 내보내기는 아직 연결되지 않았습니다. 현재 화면의 수치는 데모 데이터이므로 보고서로 내보내지 않습니다.</div>'
   ].join(''));
   mark(state);
