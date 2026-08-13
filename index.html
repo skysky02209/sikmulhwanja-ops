@@ -782,6 +782,20 @@ const validation = {
     { label: '빈 화분', placed: 8, detected: 8 },
   ],
 
+  /** 여러 특징을 합치면 갈리는가 — 개체 분리 교차검증 */
+  separabilityAuc: [
+    { label: '식물 vs 온실 잡음만', auc: 0.961, ok: true },
+    { label: '식물 vs 온실잡음 + 빈 화분', auc: 0.730, ok: false },
+    { label: '건조 토마토 vs 건조 담배', auc: 0.656, ok: false },
+    { label: '건조 vs 절단 토마토', auc: 0.740, ok: false },
+  ],
+
+  /** ★ 학습 때 못 본 잡음에 대한 성능 */
+  crossNoise: [
+    { train: '빈 화분', test: '온실 잡음', auc: 0.069, specificity: 0.0025 },
+    { train: '온실 잡음', test: '빈 화분', auc: 0.305, specificity: 0.0050 },
+  ],
+
   /** 화면에 그대로 띄우는 상태 구분 */
   status: {
     measured: [
@@ -792,7 +806,8 @@ const validation = {
     problems: [
       '빈 화분 잡음의 피크 주파수가 식물 소리와 거의 같다',
       '검출 단계는 두 종류 잡음을 100% 그대로 통과시킨다',
-      '구분은 전적으로 이중 마이크·특징·분류가 해야 한다',
+      '학습 때 못 본 잡음은 특이도 0.003 — 거의 전부 식물로 오인한다',
+      '통계적 특징만으로는 잡음을 거를 수 없다는 뜻이다',
     ],
     blocked: [
       '우리 장비로 측정한 데이터: 0건',
@@ -1226,7 +1241,40 @@ function validationPanel(v) {
   <p class="note">검출 임계값을 올려서 해결할 문제가 아닙니다 — 잡음이 식물 소리만큼 강합니다.
     구분은 이중 마이크 동시검출과 특징·분류가 해야 합니다.</p>
 
-  <h3>4. 검출 한계에서 유도한 마이크 사양</h3>
+  <h3>4. 여러 특징을 합치면 갈리는가</h3>
+  <div class="table-wrap"><table class="ops-table val-table">
+    <thead><tr><th scope="col">비교</th><th scope="col">AUC</th>
+      <th scope="col">판정</th></tr></thead>
+    <tbody>${v.separabilityAuc.map((r) => `
+      <tr class="${r.ok ? '' : 'row-attention'}">
+        <th scope="row">${esc(r.label)}</th>
+        <td class="num"><b>${r.auc.toFixed(3)}</b></td>
+        <td>${r.ok ? '<span class="badge tone-ok"><span class="badge-sign">●</span>갈림</span>'
+                   : '<span class="badge tone-warn"><span class="badge-sign">△</span>부족</span>'}</td>
+      </tr>`).join('')}</tbody>
+  </table></div>
+  <p class="note">개체(plant_id) 단위 교차검증. 온실 잡음만 상대하면 잘 갈리지만(0.961),
+    빈 화분이 섞이면 무너집니다(0.730).</p>
+
+  <h3>5. ⚠️ 학습하지 않은 잡음에는 완전히 실패합니다</h3>
+  <div class="table-wrap"><table class="ops-table val-table">
+    <thead><tr><th scope="col">학습한 잡음</th><th scope="col">시험한 잡음</th>
+      <th scope="col">AUC</th><th scope="col">특이도</th></tr></thead>
+    <tbody>${v.crossNoise.map((r) => `
+      <tr class="row-attention">
+        <th scope="row">${esc(r.train)}</th>
+        <td>${esc(r.test)}</td>
+        <td class="num">${r.auc.toFixed(3)}</td>
+        <td class="num"><b>${r.specificity.toFixed(4)}</b></td>
+      </tr>`).join('')}</tbody>
+  </table></div>
+  <p class="note"><b>특이도 0.003 = 잡음 1,000개 중 3개만 걸러냅니다.</b>
+    학습 때 못 본 잡음을 거의 전부 “식물”로 부릅니다. AUC가 0.5 미만이라는 것은
+    무작위보다 나쁘다는 뜻입니다.<br>
+    → 통계적 특징만으로는 잡음을 거를 수 없습니다. 채널 간 도달시간차 같은
+    <b>물리적 판별(이중 마이크)</b>이 필요한 이유입니다.</p>
+
+  <h3>6. 검출 한계에서 유도한 마이크 사양</h3>
   <div class="spec-grid">
     <div class="kv">
       <div class="k">50% 검출 지점</div>
@@ -1248,7 +1296,7 @@ function validationPanel(v) {
   <p class="note">이전까지 “충분한 마진”이라고만 적혀 있던 구매 사양이 숫자가 됐습니다.
     <b>유도값이며 하드웨어 실측으로 확인해야 합니다.</b></p>
 
-  <h3>5. 정리</h3>
+  <h3>7. 정리</h3>
   <div class="vstack">
     <div class="vcard tone-ok">
       <p class="vcard-title">${icons.check({ size: 15 })} 실측으로 확인된 것</p>
