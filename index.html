@@ -2357,10 +2357,12 @@ function paint() {
   parts.push(measurementHelp());
 
   mount.innerHTML = `<div class="measure">${parts.join('')}</div>`;
-  wire();
+  wireMeasure();
 }
 
-function wire() {
+// 이름을 wireMeasure 로 둔다. 단독 배포본에서는 모든 모듈이 한 스코프에
+// 인라인되므로, 부트스트랩의 wire() 와 이름이 겹치면 조용히 덮어써진다.
+function wireMeasure() {
   document.querySelectorAll('[data-scenario]').forEach((b) =>
     b.addEventListener('click', () => {
       state.scenario = b.dataset.scenario;
