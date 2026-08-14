@@ -2365,6 +2365,10 @@ function paint() {
 function wireMeasure() {
   document.querySelectorAll('[data-scenario]').forEach((b) =>
     b.addEventListener('click', () => {
+      // 측정 중에 시나리오를 바꾸면 이전 장치의 타이머가 계속 돌아
+      // 두 세션이 화면을 번갈아 다시 그린다. 반드시 먼저 멈춘다.
+      if (state.running) state.device.stopSession();
+      state.running = false;
       state.scenario = b.dataset.scenario;
       state.device = createMockDevice(state.scenario);
       state.link = 'disconnected';
@@ -2411,6 +2415,7 @@ function wireMeasure() {
 
   const r = document.getElementById('btnRestart');
   if (r) r.addEventListener('click', () => {
+    if (state.running) state.device.stopSession();
     state.live = null; state.running = false;
     state.session = null; state.validation = null;
     paint();
